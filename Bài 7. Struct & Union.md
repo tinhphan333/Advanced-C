@@ -90,7 +90,7 @@ struct name_struct
     // ...
 };
 ```
-Ví dụ kết hợp sử dụng bit field và tydef trong struct để tiết kiệm bộ nhớ:  
+Ví dụ kết hợp sử dụng bit field và typedef trong struct để tiết kiệm bộ nhớ:  
 ``` bash
 #include <stdio.h>
 #include <stdint.h>
