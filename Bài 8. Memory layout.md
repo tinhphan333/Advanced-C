@@ -1,0 +1,155 @@
+# 1. Memory Layout 
+<p align = "center">
+<img src = "https://github.com/user-attachments/assets/b0c3f587-830f-49e4-ae0f-66fcc08d4bc0" width = "700" height = "450">  
+  
+## 1.1 Text segment (Code segment)
++ Vùng nhớ chỉ đọc.
++ Chứa các lệnh thực thi (ở dạng nhị phân).
+## 1.2. Data segment (Initialized Data)
++ Chứa các biến static (global và local) khởi tạo có giá trị khác 0.
++ Chứa các biến toàn cục được khởi tạo với giá trị khác 0.
++ Có thể đọc và ghi.
++ Với trình biên dịch GCC/G++, segment này lưu trữ các biến hằng số toàn cục (const) và chuỗi ký tự (string literal) nhưng quyền truy cập chỉ đọc. 
++ Sau khi chương trình kết thúc, địa chỉ được cấp phát cho các biến sẽ được thu hồi.
+## 1.3. Bss segment (Uninitialized Data)
++ Chứa các biến toàn cục khởi tạo với giá trị bằng 0 hoặc không gán giá trị.
++ Chứa các biến static (global và local) khởi tạo có giá trị bằng 0 hoặc không gán giá trị.
++ Có thể đọc và ghi.
++ Sau khi chương trình kết thúc, địa chỉ được cấp phát cho các biến sẽ được thu hồi.
+```bash
+typedef struct{
+   int x;
+   int y;
+} Point_Data;
+static Point_Data p1 = {0,0};	// lưu ở Bss
+Point_Data p2; 				// lưu ở Bss
+Point_Data p3 = {0, 1};		// lưu ở Data
+int a = 5;					// lưu ở Data
+static int global = 0;		// lưu ở Bss
+static int global_2;			// lưu ở Bss
+const int var = 0;			// lưu ở Data
+```
+## 1.4. Stack
++ Chứa các biến cục bộ (trừ static cục bộ), tham số truyền vào.
++ Chứa hằng số cục bộ, có thể thay đổi thông qua con trỏ.
++ Quyền truy cập: đọc và ghi.
++ Sau khi ra khỏi hàm, tự động thu hồi vùng nhớ.  Kết thúc hàm thì địa chỉ biến cục bộ khai báo trong hàm sẽ thay đổi ngẫu nhiên
+```bash
+#include <stdio.h>
+
+int *ptr = NULL;  // lưu trữ ở Bss
+static int a; // lưu trữ ở Bss
+
+int test()
+{
+    const int x = 0; // lưu trữ ở Stack --> có thể thay đổi gián tiếp qua con trỏ
+    ptr = &x;        // dù lúc này con trỏ ptr đã có giá trị nhưng vẫn lưu ở Bss
+    *ptr = 1000;
+    printf("%d\n", x);
+    static int a = 3;	// lưu trữ ở Data -> không gây lỗi vì khác phân vùng nhớ
+}
+
+int main()
+{
+    test();
+}
+```
+## 1.5. Heap 
+Mảng tĩnh -> dễ bị thừa hoặc thiếu dữ liệu -> Sử dụng mảng động.  
+Heap dùng để cấp phát bộ nhớ động, bộ nhớ động là bộ nhớ có thể thay đổi phù hợp với dữ liệu trong quá trình chạy chương trình. Để cấp phát bộ nhớ động ta sử dụng các hàm malloc(), calloc(), realloc(),…
+# 2. Các hàm cấp phát bộ nhớ động
+## 2.1. Hàm malloc(size)
++ Chức năng: Cấp phát số bytes và vùng địa chỉ trên Heap dựa trên số lượng phần tử và kích thước của từng phần tử.
++ Hàm này trả về giá trị là con trỏ void nên cần phải ép kiểu để có thể truy xuất dữ liệu.
++ Tại vùng địa chỉ được cấp phát các bytes địa chỉ sẽ mang các giá trị ngẫu nhiên khác nhau. 
++ Hàm trả về NULL khi cấp phát thất bại. 
+```bash
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+
+int main()
+{
+    // uint16_t arr[];
+    int size = 0;
+    scanf("%d", &size);
+    uint16_t *ptr = (uint16_t *)malloc(size * sizeof(uint16_t));
+    if (ptr == NULL)
+        return 0;
+    for (size_t i = 0; i < size; i++)
+    {
+        printf("Address %d: %p - Value: %d \n", i, ptr + i, *(ptr + i));
+    }
+
+    return 0;
+}
+```
+Kết quả: 
+```bash
+6
+Address 0: 000002b510341430 - Value: 26288
+Address 1: 000002b510341432 - Value: 4148
+Address 2: 000002b510341434 - Value: 693
+Address 3: 000002b510341436 - Value: 0 
+Address 4: 000002b510341438 - Value: 336
+Address 5: 000002b51034143a - Value: 4148
+```
+## 2.2. Hàm calloc(size, type)
++ Hàm calloc về cơ bản giống với hàm malloc nhưng khác ở tham số đầu vào và sẽ không khởi tạo các giá trị ngẫu nhiên mà khởi tạo các giá trị bằng 0.
+```bash
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+
+int main()
+{
+    // uint16_t arr[];
+    int size = 0;
+    scanf("%d", &size);
+    uint16_t *ptr = (uint16_t *)calloc(size, sizeof(uint16_t));
+    if (ptr == NULL)
+        return 0;
+    for (size_t i = 0; i < size; i++)
+    {
+        printf("Address %d: %p - Value: %d \n", i, ptr + i, *(ptr + i));
+    }
+
+    return 0;
+}
+```
+Kết quả: 
+```bash
+6
+Address 0: 0000017872531430 - Value: 0
+Address 1: 0000017872531432 - Value: 0
+Address 2: 0000017872531434 - Value: 0
+Address 3: 0000017872531436 - Value: 0
+Address 4: 0000017872531438 - Value: 0
+Address 5: 000001787253143a - Value: 0
+```
+## 2.3. Hàm realloc(vùng nhớ, newsize)
++ Chức năng: Dùng để điều chỉnh lại kích thước vùng nhớ _đã cấp phát_ trên heap.
++ Hàm trả về NULL khi cấp phát thất bại.
+```bash
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+int main()
+{
+    uint16_t *ptr = (uint16_t *)calloc(4, sizeof(uint16_t));
+    if (ptr == NULL)
+    {
+        return 0;
+    }
+    ptr = (uint16_t *)realloc(ptr, 10 * sizeof(uint16_t)); //cấp phát lại size cho ptr đã có sẵn
+    return 0;
+}
+```
+## 2.4. Hàm free(vùng nhớ)
++ Dùng để giải phóng vùng nhớ đã cấp phát ở phân vùng nhớ Heap.
+```bash
+  // Giải phóng bộ nhớ đã cấp phát bằng hàm free, trả lại bộ nhớ cho hệ điều hành
+  free(ptr);
+  ptr = NULL; // Gán con trỏ về NULL sau khi giải phóng để tránh lỗi "dangling pointer"
+```
+
